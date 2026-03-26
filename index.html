@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Échiquier Interactif - Meilleure Case</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+        }
+        .container {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+            max-width: 1200px;
+            width: 100%;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: clamp(1.5rem, 4vw, 2rem);
+        }
+        .controls {
+            margin-bottom: 20px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: center;
+        }
+        .piece-btn {
+            padding: 8px 12px;
+            font-size: clamp(18px, 3vw, 24px);
+            border: 2px solid #ddd;
+            background: white;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: all 0.3s;
+            flex: 0 0 auto;
+        }
+        .piece-btn:hover {
+            transform: scale(1.1);
+            border-color: #667eea;
+        }
+        .piece-btn.selected {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+        .board-container {
+            width: 100%;
+            overflow: auto;
+            margin: 20px 0;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            background: #f9f9f9;
+        }
+        .board {
+            display: grid;
+            margin: 0 auto;
+            border: 3px solid #333;
+            min-width: min(calc(100vw - 100px), 800px);
+        }
+        .square {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+            aspect-ratio: 1/1;
+        }
+        .square.light {
+            background-color: #f0d9b5;
+        }
+        .square.dark {
+            background-color: #b58863;
+        }
+        .square.controlled {
+            background-color: rgba(255, 0, 0, 0.3) !important;
+        }
+        .square.best-placement {
+            background-color: rgba(76, 175, 80, 0.7) !important;
+            box-shadow: inset 0 0 0 3px #4CAF50, 0 0 10px rgba(76, 175, 80, 0.5);
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { box-shadow: inset 0 0 0 3px #4CAF50, 0 0 10px rgba(76, 175, 80, 0.5); }
+            50% { box-shadow: inset 0 0 0 3px #4CAF50, 0 0 15px rgba(76, 175, 80, 0.8); }
+            100% { box-shadow: inset 0 0 0 3px #4CAF50, 0 0 10px rgba(76, 175, 80, 0.5); }
+        }
+        .square:hover {
+            opacity: 0.8;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        .action-btn {
+            padding: 10px 20px;
+            font-size: 14px;
+            border: none;
+            background: #667eea;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        .action-btn:hover {
+            background: #5568d3;
+        }
+        .info {
+            text-align: center;
+            margin-top: 15px;
+            color: #666;
+            font-size: clamp(12px, 2vw, 14px);
+        }
+        .score-display {
+            text-align: center;
+            margin: 15px 0;
+            font-size: clamp(16px, 3vw, 18px);
+            font-weight: bold;
+            color: #333;
+        }
+        .best-move {
+            text-align: center;
+            margin: 15px 0;
+            padding: 10px;
+            background: #e8f5e9;
+            border-radius: 8px;
+            border-left: 4px solid #4CAF50;
+            font-weight: bold;
+            font-size: clamp(14px, 2.5vw, 16px);
+        }
+        .best-move.hidden {
+            display: none;
+        }
+        .board-controls {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .size-control {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 15px;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+        .size-slider-container {
+            flex: 1;
+            min-width: 250px;
+            max-width: 400px;
+        }
+        .size-slider {
+            width: 100%;
+            height: 10px;
+            -webkit-appearance: none;
+            appearance: none;
+            background: #ddd;
+            border-radius: 5px;
+            outline: none;
+        }
+        .size-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: 3px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .size-slider::-moz-range-thumb {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: #667eea;
+            cursor: pointer;
+            border: 3px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        .size-display {
+            font-size: clamp(16px, 3vw, 20px);
+            font-weight: bold;
+            color: #333;
+            padding: 8px 16px;
+            background: #f0f0f0;
+            border-radius: 8px;
+            min-width: 100px;
+            text-align: center;
+        }
+        .size-label {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 5px;
+            display: block;
+        }
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+            .board-container {
+                padding: 5px;
+            }
+            .size-control {
+                flex-direction: column;
+                gap: 10px;
+            }
+            .size-slider-container {
+                min-width: 100%;
+            }
+        }
+        @media (max-width: 480px) {
+            .controls {
+                gap: 5px;
+            }
+            .piece-btn {
+                padding: 6px 8px;
+                font-size: 16px;
+            }
+            .button-group {
+                flex-direction: column;
+                align-items: center;
+            }
+            .action-btn {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>♔ Échiquier Interactif - Meilleure Case ♔</h1>
+        
+        <div class="score-display" id="scoreDisplay">
+            Score: 0 pièces placées
+        </div>
+        
+        <div class="best-move hidden" id="bestMove">
+            <!-- Le contenu sera rempli par JavaScript -->
+        </div>
+        
+        <div class="board-controls">
+            <div class="size-control">
+                <div class="size-slider-container">
+                    <label class="size-label">Taille de l'échiquier :</label>
+                    <input type="range" min="2" max="15" value="8" class="size-slider" id="sizeSlider">
+                </div>
+                <div class="size-display" id="sizeDisplay">8 × 8</div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="piece-btn" data-piece="♔" data-type="king" data-color="white" title="Roi blanc">♔</button>
+            <button class="piece-btn" data-piece="♕" data-type="queen" data-color="white" title="Dame blanche">♕</button>
+            <button class="piece-btn" data-piece="♖" data-type="rook" data-color="white" title="Tour blanche">♖</button>
+            <button class="piece-btn" data-piece="♗" data-type="bishop" data-color="white" title="Fou blanc">♗</button>
+            <button class="piece-btn" data-piece="♘" data-type="knight" data-color="white" title="Cavalier blanc">♘</button>
+            <button class="piece-btn" data-piece="♙" data-type="pawn" data-color="white" title="Pion blanc">♙</button>
+        </div>
+        
+        <div class="board-container">
+            <div class="board" id="board"></div>
+        </div>
+        
+        <div class="button-group">
+            <button class="action-btn" onclick="toggleControlled()">Afficher/Masquer les cases contrôlées</button>
+            <button class="action-btn" onclick="clearBoard()">Effacer l'échiquier</button>
+        </div>
+        
+        <div class="info">
+            <p>Cliquez sur une pièce puis sur l'échiquier pour la placer. Clic droit pour supprimer.</p>
+            <p><strong>Objectif :</strong> Placez le maximum de pièces sans qu'elles s'attaquent mutuellement.</p>
+            <p><strong>Indicateur :</strong> La meilleure case pour la pièce sélectionnée est mise en évidence en vert.</p>
+        </div>
+    </div>
+
+    <script>
+        let selectedPiece = null;
+        let board = [];
+        let showControlled = true;
+        let score = 0;
+        let bestPosition = null;
+        let boardSize = 8; // Taille initiale du plateau
+
+        // Initialisation du plateau
+        function initBoard() {
+            const boardEl = document.getElementById('board');
+            const boardContainer = document.querySelector('.board-container');
+            boardEl.innerHTML = '';
+            
+            // Calculer la taille maximale disponible
+            const containerWidth = boardContainer.clientWidth - 40; // Soustraire le padding
+            const containerHeight = Math.min(window.innerHeight * 0.6, 600);
+            const maxSize = Math.min(containerWidth, containerHeight);
+            
+            // Calculer la taille des cases
+            const squareSize = Math.max(20, Math.floor(maxSize / boardSize));
+            
+            // Définir la grille
+            boardEl.style.gridTemplateColumns = `repeat(${boardSize}, ${squareSize}px)`;
+            boardEl.style.gridTemplateRows = `repeat(${boardSize}, ${squareSize}px)`;
+            
+            // Mettre à jour l'affichage de la taille
+            document.getElementById('sizeDisplay').textContent = `${boardSize} × ${boardSize}`;
+            document.getElementById('sizeSlider').value = boardSize;
+            
+            // Initialiser le tableau du plateau
+            board = [];
+            for (let i = 0; i < boardSize; i++) {
+                board[i] = [];
+                for (let j = 0; j < boardSize; j++) {
+                    board[i][j] = null;
+                }
+            }
+            
+            // Créer les cases
+            for (let row = 0; row < boardSize; row++) {
+                for (let col = 0; col < boardSize; col++) {
+                    const square = document.createElement('div');
+                    square.className = 'square ' + ((row + col) % 2 === 0 ? 'light' : 'dark');
+                    square.dataset.row = row;
+                    square.dataset.col = col;
+                    
+                    // Appliquer la taille de police adaptative
+                    square.style.fontSize = `${Math.max(12, squareSize * 0.4)}px`;
+                    
+                    square.addEventListener('click', function() {
+                        handleSquareClick(row, col);
+                    });
+                    square.addEventListener('contextmenu', function(e) {
+                        e.preventDefault();
+                        removePiece(row, col);
+                    });
+                    
+                    boardEl.appendChild(square);
+                }
+            }
+            
+            // Initialiser les boutons de pièces
+            const pieceBtns = document.querySelectorAll('.piece-btn');
+            pieceBtns.forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    selectPiece(btn);
+                });
+            });
+            
+            // Initialiser le slider
+            const sizeSlider = document.getElementById('sizeSlider');
+            sizeSlider.addEventListener('input', function() {
+                const newSize = parseInt(this.value);
+                changeBoardSize(newSize);
+            });
+            
+            updateBoard();
+            updateScore();
+            hideBestMove();
+            bestPosition = null;
+        }
+
+        function changeBoardSize(size) {
+            if (size >= 2 && size <= 15) {
+                boardSize = size;
+                initBoard();
+            }
+        }
+
+        // Redimensionner l'échiquier quand la fenêtre change
+        window.addEventListener('resize', function() {
+            initBoard();
+        });
+
+        function selectPiece(btn) {
+            const allBtns = document.querySelectorAll('.piece-btn');
+            allBtns.forEach(function(b) {
+                b.classList.remove('selected');
+            });
+            btn.classList.add('selected');
+            
+            selectedPiece = {
+                symbol: btn.dataset.piece,
+                type: btn.dataset.type,
+                color: btn.dataset.color
+            };
+            
+            updateBestPosition();
+        }
+
+        function handleSquareClick(row, col) {
+            if (selectedPiece) {
+                if (isValidPlacement(row, col, selectedPiece)) {
+                    board[row][col] = {
+                        symbol: selectedPiece.symbol,
+                        type: selectedPiece.type,
+                        color: selectedPiece.color
+                    };
+                    updateBoard();
+                    updateScore();
+                    updateBestPosition();
+                } else {
+                    alert("Placement invalide ! Cette case est attaquée par une autre pièce ou attaque une autre pièce.");
+                }
+            }
+        }
+
+        function removePiece(row, col) {
+            board[row][col] = null;
+            updateBoard();
+            updateScore();
+            if (selectedPiece) {
+                updateBestPosition();
+            }
+        }
+
+        function isValidPlacement(row, col, piece) {
+            if (board[row][col]) return false;
+            
+            const controlled = getControlledSquares(row, col, piece);
+            for (let i = 0; i < controlled.length; i++) {
+                const [r, c] = controlled[i];
+                if (board[r][c]) {
+                    return false;
+                }
+            }
+            
+            for (let r = 0; r < boardSize; r++) {
+                for (let c = 0; c < boardSize; c++) {
+                    if (board[r][c]) {
+                        const existingControlled = getControlledSquares(r, c, board[r][c]);
+                        for (let j = 0; j < existingControlled.length; j++) {
+                            const [er, ec] = existingControlled[j];
+                            if (er === row && ec === col) {
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            return true;
+        }
+
+        function getControlledSquares(row, col, piece) {
+            const controlled = [];
+            const type = piece.type;
+            
+            if (type === 'pawn') {
+                if (col > 0 && row - 1 >= 0) {
+                    controlled.push([row - 1, col - 1]);
+                }
+                if (col < boardSize - 1 && row - 1 >= 0) {
+                    controlled.push([row - 1, col + 1]);
+                }
+            } else if (type === 'knight') {
+                const moves = [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]];
+                for (let i = 0; i < moves.length; i++) {
+                    const dr = moves[i][0];
+                    const dc = moves[i][1];
+                    const nr = row + dr;
+                    const nc = col + dc;
+                    if (nr >= 0 && nr < boardSize && nc >= 0 && nc < boardSize) {
+                        controlled.push([nr, nc]);
+                    }
+                }
+            } else if (type === 'king') {
+                for (let dr = -1; dr <= 1; dr++) {
+                    for (let dc = -1; dc <= 1; dc++) {
+                        if (dr === 0 && dc === 0) continue;
+                        const nr = row + dr;
+                        const nc = col + dc;
+                        if (nr >= 0 && nr < boardSize && nc >= 0 && nc < boardSize) {
+                            controlled.push([nr, nc]);
+                        }
+                    }
+                }
+            } else if (type === 'rook') {
+                const dirs = [[-1,0],[1,0],[0,-1],[0,1]];
+                for (let d = 0; d < dirs.length; d++) {
+                    const dr = dirs[d][0];
+                    const dc = dirs[d][1];
+                    for (let i = 1; i < boardSize; i++) {
+                        const nr = row + dr * i;
+                        const nc = col + dc * i;
+                        if (nr < 0 || nr >= boardSize || nc < 0 || nc >= boardSize) break;
+                        controlled.push([nr, nc]);
+                        if (board[nr][nc]) break;
+                    }
+                }
+            } else if (type === 'bishop') {
+                const dirs = [[-1,-1],[-1,1],[1,-1],[1,1]];
+                for (let d = 0; d < dirs.length; d++) {
+                    const dr = dirs[d][0];
+                    const dc = dirs[d][1];
+                    for (let i = 1; i < boardSize; i++) {
+                        const nr = row + dr * i;
+                        const nc = col + dc * i;
+                        if (nr < 0 || nr >= boardSize || nc < 0 || nc >= boardSize) break;
+                        controlled.push([nr, nc]);
+                        if (board[nr][nc]) break;
+                    }
+                }
+            } else if (type === 'queen') {
+                const dirs = [[-1,0],[1,0],[0,-1],[0,1],[-1,-1],[-1,1],[1,-1],[1,1]];
+                for (let d = 0; d < dirs.length; d++) {
+                    const dr = dirs[d][0];
+                    const dc = dirs[d][1];
+                    for (let i = 1; i < boardSize; i++) {
+                        const nr = row + dr * i;
+                        const nc = col + dc * i;
+                        if (nr < 0 || nr >= boardSize || nc < 0 || nc >= boardSize) break;
+                        controlled.push([nr, nc]);
+                        if (board[nr][nc]) break;
+                    }
+                }
+            }
+            
+            return controlled;
+        }
+
+        function updateBoard() {
+            const allControlled = {};
+            
+            for (let row = 0; row < boardSize; row++) {
+                for (let col = 0; col < boardSize; col++) {
+                    if (board[row][col]) {
+                        const controlled = getControlledSquares(row, col, board[row][col]);
+                        for (let i = 0; i < controlled.length; i++) {
+                            const r = controlled[i][0];
+                            const c = controlled[i][1];
+                            allControlled[r + ',' + c] = true;
+                        }
+                    }
+                }
+            }
+            
+            const squares = document.querySelectorAll('.square');
+            squares.forEach(function(square) {
+                const row = parseInt(square.dataset.row);
+                const col = parseInt(square.dataset.col);
+                
+                square.classList.remove('controlled', 'best-placement');
+                
+                if (showControlled && allControlled[row + ',' + col]) {
+                    square.classList.add('controlled');
+                }
+                
+                if (bestPosition && row === bestPosition[0] && col === bestPosition[1]) {
+                    square.classList.add('best-placement');
+                }
+                
+                square.textContent = board[row][col] ? board[row][col].symbol : '';
+            });
+        }
+
+        function updateScore() {
+            score = 0;
+            for (let row = 0; row < boardSize; row++) {
+                for (let col = 0; col < boardSize; col++) {
+                    if (board[row][col]) {
+                        score++;
+                    }
+                }
+            }
+            document.getElementById('scoreDisplay').textContent = `Score: ${score} pièces placées`;
+        }
+
+        function updateBestPosition() {
+            if (!selectedPiece) {
+                bestPosition = null;
+                hideBestMove();
+                updateBoard();
+                return;
+            }
+            
+            bestPosition = findBestPlacement(selectedPiece);
+            updateBoard();
+            
+            if (bestPosition) {
+                const [row, col] = bestPosition;
+                const colName = String.fromCharCode(97 + col);
+                const rowName = boardSize - row;
+                showBestMove(`Meilleure case pour ${selectedPiece.symbol}: ${colName}${rowName}`);
+            } else {
+                hideBestMove();
+            }
+        }
+
+        function findBestPlacement(piece) {
+            let bestPosition = null;
+            let bestScore = -1;
+            
+            for (let row = 0; row < boardSize; row++) {
+                for (let col = 0; col < boardSize; col++) {
+                    if (isValidPlacement(row, col, piece)) {
+                        board[row][col] = {
+                            symbol: piece.symbol,
+                            type: piece.type,
+                            color: piece.color
+                        };
+                        
+                        const placementScore = evaluatePlacement();
+                        board[row][col] = null;
+                        
+                        if (placementScore > bestScore) {
+                            bestScore = placementScore;
+                            bestPosition = [row, col];
+                        }
+                    }
+                }
+            }
+            
+            return bestPosition;
+        }
+
+        function evaluatePlacement() {
+            let availableSquares = 0;
+            const pieceTypes = ['king', 'queen', 'rook', 'bishop', 'knight', 'pawn'];
+            
+            for (let type of pieceTypes) {
+                for (let row = 0; row < boardSize; row++) {
+                    for (let col = 0; col < boardSize; col++) {
+                        if (!board[row][col] && isValidPlacement(row, col, {type: type, color: 'white'})) {
+                            availableSquares++;
+                        }
+                    }
+                }
+            }
+            
+            return availableSquares;
+        }
+
+        function showBestMove(message) {
+            const bestMoveEl = document.getElementById('bestMove');
+            bestMoveEl.textContent = message;
+            bestMoveEl.classList.remove('hidden');
+        }
+
+        function hideBestMove() {
+            const bestMoveEl = document.getElementById('bestMove');
+            bestMoveEl.classList.add('hidden');
+        }
+
+        function toggleControlled() {
+            showControlled = !showControlled;
+            updateBoard();
+        }
+
+        function clearBoard() {
+            for (let i = 0; i < boardSize; i++) {
+                for (let j = 0; j < boardSize; j++) {
+                    board[i][j] = null;
+                }
+            }
+            updateBoard();
+            updateScore();
+            hideBestMove();
+            bestPosition = null;
+        }
+
+        // Initialiser au chargement
+        window.addEventListener('DOMContentLoaded', initBoard);
+    </script>
+</body>
+</html>
